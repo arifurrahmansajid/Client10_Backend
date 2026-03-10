@@ -103,6 +103,8 @@ const handleSetAsBackground = TryCatch(async (req, res) => {
 });
 
 const handleDeleteVideo = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
   const id = req.params.id;
   const video = await VideoModel.findById(id);
   if (!video) return TError("Video not found", 404);
@@ -117,6 +119,12 @@ const handleDeleteVideo = TryCatch(async (req, res) => {
     }
     res.json({ message: "Video deleted successfully", deleteVideo });
   } else {
+    // PUBLIC video deletion - RESTRICT TO ADMIN
+    const token = req.headers.authorization;
+    const user = await getCurrentUser(token);
+    if (!user?.roles.includes("admin"))
+      return TError("You are not authorized to delete public content", 401);
+
     const deleteVideo = await VideoModel.findByIdAndDelete(id);
     if (deleteVideo) {
       removeFile(deleteVideo?.name);
@@ -145,13 +153,15 @@ const handleGetBackGroundVideo = TryCatch(async (req, res) => {
 const handleDeleteAllPublicVideo = TryCatch(async (req, res) => {
   const token = req.headers.authorization;
   const user = await getCurrentUser(token);
+  if (!user?.roles.includes("admin"))
+    return TError("You are not authorized", 401);
   const video = await VideoModel.find({
-    user: user?._id,
+    $or: [{ user: null }, { user: undefined }],
   });
   video.forEach((video) => {
     removeFile(video?.name);
   });
-  await VideoModel.deleteMany({ user: user?._id });
+  await VideoModel.deleteMany({ $or: [{ user: null }, { user: undefined }] });
   res.json({ message: "Videos deleted successfully" });
 });
 

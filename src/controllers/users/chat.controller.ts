@@ -30,7 +30,9 @@ async function isSpammer(ip: string) {
 }
 
 async function usingBlockedText(message: string): Promise<boolean> {
-  const blockedTexts = process.env.BLOCKED_TEXTS!.split(",").filter(Boolean);
+  if (!message) return false;
+  if (!process.env.BLOCKED_TEXTS) return false;
+  const blockedTexts = process.env.BLOCKED_TEXTS.split(",").filter(Boolean);
 
   // Normalize message: lowercase, remove underscores, dashes, etc.
   const normalizedMessage = message.toLowerCase().replace(/[\s\-_.]+/g, "");

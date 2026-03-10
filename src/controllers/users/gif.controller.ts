@@ -105,6 +105,8 @@ const handleSetAsBackground = TryCatch(async (req, res) => {
 });
 
 const handleDeleteGIF = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
   const id = req.params.id;
   const gifs = await GIFModel.findById(id);
   if (!gifs) return TError("Gif not found", 404);
@@ -119,6 +121,12 @@ const handleDeleteGIF = TryCatch(async (req, res) => {
     }
     res.json({ message: "Gif deleted successfully", deleteGifs });
   } else {
+    // PUBLIC GIF deletion - RESTRICT TO ADMIN
+    const token = req.headers.authorization;
+    const user = await getCurrentUser(token);
+    if (!user?.roles.includes("admin"))
+      return TError("You are not authorized to delete public content", 401);
+
     const deleteGifs = await GIFModel.findByIdAndDelete(id);
     if (deleteGifs) {
       removeFile(deleteGifs?.name);
@@ -147,14 +155,16 @@ const handleGetBackGroundGIF = TryCatch(async (req, res) => {
 const handleDeleteAllPublicGIF = TryCatch(async (req, res) => {
   const token = req.headers.authorization;
   const user = await getCurrentUser(token);
+  if (!user?.roles.includes("admin"))
+    return TError("You are not authorized", 401);
   const gifs = await GIFModel.find({
-    user: user?._id,
+    $or: [{ user: null }, { user: undefined }],
   });
   gifs.forEach((gif) => {
     removeFile(gif?.name);
   });
   await GIFModel.deleteMany({
-    user: user?._id,
+    $or: [{ user: null }, { user: undefined }],
   });
   res.json({ message: "Gifs deleted successfully" });
 });

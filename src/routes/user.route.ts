@@ -6,6 +6,7 @@ import {
   getDefaulProfilePicture,
   GetSpecifcUserProfile,
   handleAddRemoveFriend,
+  handleAdminDeleteUser,
   handleGetAllFriends,
   handleGetToken,
   handleGetUserFriends,
@@ -37,6 +38,7 @@ userRouter.route("/friend").get(handleGetAllFriends);
 userRouter.route("/profile-friend").get(handleGetUserFriends);
 userRouter.route("/token").get(handleGetToken);
 userRouter.route("/friend/:id").post(handleAddRemoveFriend);
+userRouter.route("/:id").delete(handleAdminDeleteUser);
 userRouter.route("/public-profile/:id").get(GetSpecifcUserProfile);
 
 export default userRouter;

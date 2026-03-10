@@ -105,6 +105,8 @@ const handleSetAsBackground = TryCatch(async (req, res) => {
 });
 
 const handleDeleteImage = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
   const id = req.params.id;
   const image = await ImageModel.findById(id);
   if (!image) return TError("Image not found", 404);
@@ -119,6 +121,12 @@ const handleDeleteImage = TryCatch(async (req, res) => {
     }
     res.json({ message: "Image deleted successfully", deleteImage });
   } else {
+    // PUBLIC image deletion - RESTRICT TO ADMIN
+    const token = req.headers.authorization;
+    const user = await getCurrentUser(token);
+    if (!user?.roles.includes("admin"))
+      return TError("You are not authorized to delete public content", 401);
+
     const deleteImage = await ImageModel.findByIdAndDelete(id);
     if (deleteImage) {
       removeFile(deleteImage?.name);
@@ -147,13 +155,15 @@ const handleGetbackGroundImage = TryCatch(async (req, res) => {
 const handleDeleteAllPublicImages = TryCatch(async (req, res) => {
   const token = req.headers.authorization;
   const user = await getCurrentUser(token);
+  if (!user?.roles.includes("admin"))
+    return TError("You are not authorized", 401);
   const images = await ImageModel.find({
-    user: user?._id,
+    $or: [{ user: null }, { user: undefined }],
   });
   images.forEach((image) => {
     removeFile(image?.name);
   });
-  await ImageModel.deleteMany({ user: user?._id });
+  await ImageModel.deleteMany({ $or: [{ user: null }, { user: undefined }] });
   res.json({ message: "Images deleted successfully" });
 });
 
