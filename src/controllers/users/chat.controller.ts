@@ -129,6 +129,8 @@ const GetAllChats = TryCatch(async (req, res) => {
     ChatModel.findOne({ spammer: true }).sort({ createdAt: -1 }).lean(),
   ]);
 
+  const spamIP = spamMessage?.ip;
+
   if (chatingWith) {
     const chats = await ChatModel.find({
       $and: [
@@ -142,7 +144,7 @@ const GetAllChats = TryCatch(async (req, res) => {
             },
           ],
         },
-        { ip: { $ne: spamMessage?.ip } },
+        spamIP ? { ip: { $ne: spamIP } } : {},
       ],
     })
       .select(["-spammer", "-ip", "-ips", "-token", "-origin", "-userAgent"])
@@ -153,7 +155,7 @@ const GetAllChats = TryCatch(async (req, res) => {
     const chats = await ChatModel.find({
       $and: [
         { $or: [{ sentTo: null }, { sentTo: undefined }] },
-        { ip: { $ne: spamMessage?.ip } },
+        spamIP ? { ip: { $ne: spamIP } } : {},
       ],
     })
       .select(["-ip", "-ips", "-token", "-spammer", "-origin", "-userAgent"])
@@ -161,24 +163,50 @@ const GetAllChats = TryCatch(async (req, res) => {
       .lean();
     res.json({ chats });
   }
-  await ChatModel.deleteMany({ ip: spamMessage?.ip, spammer: false });
 });
 
 const DeleteChat = TryCatch(async (req, res) => {
   const token = req.headers.authorization;
   const isPrivate = req.query.isPrivate;
+  const chatingWith = req.query.chatingWith;
   const [user, isDisable] = await Promise.all([
     getCurrentUser(token),
     isFunctionDisable("delete"),
   ]);
-  if (isDisable) return res.json({ message: "Delete is currently disable" });
-  if (user && isPrivate) {
-    await ChatModel.deleteMany({ sentBy: user._id });
-    res.json({ message: "Messages deleted successfully", isPrivate: true });
-    return;
+
+  if (isDisable) return TError("Delete is currently disabled", 400);
+  if (!user) return TError("Unauthorized", 401);
+
+  if (isPrivate) {
+    if (chatingWith) {
+      // ONLY delete conversation between user and this specific friend
+      await ChatModel.deleteMany({
+        $or: [
+          { $and: [{ sentBy: user._id }, { sentTo: chatingWith }] },
+          { $and: [{ sentBy: chatingWith }, { sentTo: user._id }] }
+        ]
+      });
+    } else {
+      // Delete ALL private messages for this specific user
+      await ChatModel.deleteMany({
+        $or: [{ sentBy: user._id }, { sentTo: user._id }]
+      });
+    }
+    return res.json({ message: "Private messages deleted successfully", isPrivate: true });
   }
-  await ChatModel.deleteMany({});
-  res.json({ message: "Messages deleted successfully" });
+
+  // Handle Public Deletion
+  if (user.roles.includes("admin")) {
+    await ChatModel.deleteMany({ $or: [{ sentTo: null }, { sentTo: undefined }] });
+    res.json({ message: "Public chat cleared by admin" });
+  } else {
+    // Regular users only delete their own public messages
+    await ChatModel.deleteMany({
+      sentBy: user._id,
+      $or: [{ sentTo: null }, { sentTo: undefined }]
+    });
+    res.json({ message: "Your public messages cleared" });
+  }
 });
 
 const UpdateChat = TryCatch(async (req, res) => {

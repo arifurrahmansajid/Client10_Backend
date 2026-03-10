@@ -80,26 +80,21 @@ export function SocketInitialze(
     socket.on(
       "user-disconnected",
       ({ id, socketId }: { id: string; socketId: string }) => {
+        const targetSocketId = socketId || socket.id;
         const allRooms = Array.from(roomMap.keys());
         allRooms.forEach((roomId) => {
           const roomUsers = roomMap.get(roomId)!;
-          if (!roomUsers.includes(socket.id)) return;
+          if (!roomUsers.includes(targetSocketId)) return;
           roomMap.set(
             roomId,
-            roomUsers.filter((id) => id !== socket.id)
+            roomUsers.filter((sId) => sId !== targetSocketId)
           );
           socket.leave(roomId);
-          socket.to(roomId).emit("user-left", socket.id);
+          socket.to(roomId).emit("user-left", targetSocketId);
         });
-        if (!id) {
-          onlineUsers = onlineUsers.filter(
-            (user) => user.socketID !== socketId
-          );
-          io.emit("online-users", onlineUsers);
-          return;
-        }
+
         onlineUsers = onlineUsers.filter(
-          (user) => user._id !== id && user.socketID !== socketId
+          (user) => user.socketID !== targetSocketId
         );
         io.emit("online-users", onlineUsers);
       }
@@ -304,6 +299,10 @@ export function SocketInitialze(
         console.log({ userLeft: roomUsers.filter((id) => id !== socket.id) });
         socket.to(roomId).emit("user-left", socket.id);
       });
+
+      // Crucial: remove from onlineUsers if the socket drops connection abruptly
+      onlineUsers = onlineUsers.filter((u) => u.socketID !== socket.id);
+      io.emit("online-users", onlineUsers);
     });
   });
 }
