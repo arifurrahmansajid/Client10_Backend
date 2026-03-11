@@ -1,4 +1,5 @@
 import { BackgroundTypeEnum, getCurrentUser } from "../../db/utils";
+import { UserModel } from "../../db/schema/user.schema";
 import { TryCatch } from "../../utils/try-catch";
 import type { Express } from "express";
 import { isFunctionDisable, removeFile, TError } from "../../utils/utils";
@@ -21,6 +22,7 @@ const SaveAudio = TryCatch(async (req, res) => {
       url: filePath,
       setAsBackground: false,
       user: user?._id,
+      isPublic: !token || !user,
     });
   }
   res.json({ message: "Files uploaded successfully", url: urls });
@@ -65,10 +67,14 @@ const handleSetAsBackground = TryCatch(async (req, res) => {
       { setAsBackground: false }
     );
   }
+  if (user) {
+    await UserModel.findByIdAndUpdate(user._id, { backgroundType: type });
+  }
   const updatedAudio = await AudioModel.findByIdAndUpdate(
     id,
     {
       setAsBackground: !audio.setAsBackground,
+      user: type === BackgroundTypeEnum.PUBLIC ? null : user?._id,
     },
     { new: true }
   );
@@ -111,7 +117,7 @@ const handleGetBackGroundAudio = TryCatch(async (req, res) => {
   if (!userId) {
     const audio = await AudioModel.findOne({
       setAsBackground: true,
-      user: undefined,
+      $or: [{ user: null }, { user: { $exists: false } }],
     });
     res.json({ audio: audio?.url });
   } else {

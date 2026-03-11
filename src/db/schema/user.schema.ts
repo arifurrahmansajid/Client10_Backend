@@ -66,6 +66,10 @@ const UserSchema = new Schema(
     relationShip: {
       type: String,
     },
+    backgroundType: {
+      type: String,
+      default: "public",
+    },
   },
   { timestamps: true }
 );

@@ -98,7 +98,7 @@ export const completeUpload = TryCatch(async (req: Request, res: Response) => {
         url: filePath,
         setAsBackground: false,
         user: user?._id,
-        isPublic: true,
+        isPublic: !token || !user,
       });
     } else if (fileType === "image" || [".jpg", ".jpeg", ".png", ".webp", ".svg"].includes(ext)) {
       await ImageModel.create({
@@ -106,7 +106,7 @@ export const completeUpload = TryCatch(async (req: Request, res: Response) => {
         url: filePath,
         setAsBackground: false,
         user: user?._id,
-        isPublic: true,
+        isPublic: !token || !user,
       });
     } else if (fileType === "audio" || [".mp3", ".wav", ".ogg"].includes(ext)) {
       await AudioModel.create({
@@ -114,7 +114,7 @@ export const completeUpload = TryCatch(async (req: Request, res: Response) => {
         url: filePath,
         setAsBackground: false,
         user: user?._id,
-        isPublic: true,
+        isPublic: !token || !user,
       });
     } else if (fileType === "gif" || ext === ".gif") {
       await GIFModel.create({
@@ -122,7 +122,7 @@ export const completeUpload = TryCatch(async (req: Request, res: Response) => {
         url: filePath,
         setAsBackground: false,
         user: user?._id,
-        isPublic: true,
+        isPublic: !token || !user,
       });
     }
 

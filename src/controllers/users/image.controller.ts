@@ -2,6 +2,7 @@ import { GIFModel } from "../../db/schema/gif.schema";
 import { ImageModel } from "../../db/schema/images.schema";
 import { VideoModel } from "../../db/schema/video.schema";
 import { BackgroundTypeEnum, getCurrentUser } from "../../db/utils";
+import { UserModel } from "../../db/schema/user.schema";
 import { TryCatch } from "../../utils/try-catch";
 import { BACKGROUN_STYLE } from "../../utils/types";
 import { isFunctionDisable, removeFile, TError } from "../../utils/utils";
@@ -25,6 +26,7 @@ const SaveFile = TryCatch(async (req, res) => {
       url: filePath,
       setAsBackground: false,
       user: user?._id,
+      isPublic: !token || !user,
     });
   }
   res.json({ message: "Fictures uploaded successfully", url: urls });
@@ -91,11 +93,15 @@ const handleSetAsBackground = TryCatch(async (req, res) => {
       ),
     ]);
   }
+  if (user) {
+    await UserModel.findByIdAndUpdate(user._id, { backgroundType: type });
+  }
   const updatedImage = await ImageModel.findByIdAndUpdate(
     id,
     {
       setAsBackground: body === null ? false : true,
       style: body,
+      user: type === BackgroundTypeEnum.PUBLIC ? null : user?._id,
     },
     { new: true }
   );
@@ -138,7 +144,7 @@ const handleGetbackGroundImage = TryCatch(async (req, res) => {
   if (!userId) {
     const image = await ImageModel.findOne({
       setAsBackground: true,
-      user: undefined,
+      $or: [{ user: null }, { user: { $exists: false } }],
     });
     res.json({ image: image });
   } else {
