@@ -68,7 +68,8 @@ export function SocketInitialze(
       if (userExists) {
         onlineUsers = onlineUsers.map((user) => {
           if (user._id === userExists._id) {
-            return data;
+            // Keep socketID but update with latest DB info like profilePic
+            return { ...user, ...data, socketID: user.socketID };
           }
           return user;
         });
@@ -176,11 +177,10 @@ export function SocketInitialze(
 
     socket.on("user-updated", (data: UserType) => {
       onlineUsers = onlineUsers.map((user) => {
-        if (user.socketID === data.socketID) {
+        if (user.socketID === data.socketID || user._id === data._id) {
           return {
             ...user,
-            name: data.name,
-            race: data.race,
+            ...data,
           };
         }
         return user;
