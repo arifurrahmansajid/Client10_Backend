@@ -107,8 +107,8 @@ export function SocketInitialze(
       io.emit("messages-delete-all");
     });
     socket.on("personal-message", (data: Message) => {
-      if (data.sentTo?.email) {
-        const user = onlineUsers.find((u) => u.email === data.sentTo?.email);
+      if (data.sentTo?._id) {
+        const user = onlineUsers.find((u) => u._id === data.sentTo?._id);
         if (user?.socketID)
           io.to(user.socketID).emit("personal-message-to-user", data);
       }
