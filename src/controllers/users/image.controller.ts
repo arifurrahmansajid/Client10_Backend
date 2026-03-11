@@ -31,9 +31,7 @@ const SaveFile = TryCatch(async (req, res) => {
 });
 
 const getAllFiles = TryCatch(async (req, res) => {
-  const images = await ImageModel.find({
-    $or: [{ user: null }, { user: undefined }],
-  })
+  const images = await ImageModel.find({ isPublic: true })
     .select("url setAsBackground style")
     .sort({ createdAt: -1 });
   res.json({ images });

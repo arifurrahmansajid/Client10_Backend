@@ -30,9 +30,7 @@ const SaveVideo = TryCatch(async (req, res) => {
 });
 
 const getAllPublicVideos = TryCatch(async (req, res) => {
-  const videos = await VideoModel.find({
-    $or: [{ user: null }, { user: undefined }],
-  })
+  const videos = await VideoModel.find({ isPublic: true })
     .select("url setAsBackground style")
     .sort({ createdAt: -1 });
   res.json({ videos });

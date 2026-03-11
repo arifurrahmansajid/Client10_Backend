@@ -27,9 +27,7 @@ const SaveAudio = TryCatch(async (req, res) => {
 });
 
 const getAllPublicAudios = TryCatch(async (req, res) => {
-  const musics = await AudioModel.find({
-    $or: [{ user: null }, { user: undefined }],
-  })
+  const musics = await AudioModel.find({ isPublic: true })
     .select("url setAsBackground")
     .sort({ createdAt: -1 });
   res.json({ musics });

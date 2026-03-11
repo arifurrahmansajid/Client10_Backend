@@ -18,6 +18,10 @@ const AudioSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "users",
     },
+    isPublic: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

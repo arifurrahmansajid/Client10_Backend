@@ -31,9 +31,7 @@ const SaveGIF = TryCatch(async (req, res) => {
 });
 
 const getAllPublicGIFS = TryCatch(async (req, res) => {
-  const gifs = await GIFModel.find({
-    $or: [{ user: null }, { user: undefined }],
-  })
+  const gifs = await GIFModel.find({ isPublic: true })
     .select("url setAsBackground style")
     .sort({ createdAt: -1 });
   res.json({ gifs });

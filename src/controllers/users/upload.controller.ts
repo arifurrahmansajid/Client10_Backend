@@ -89,42 +89,46 @@ export const completeUpload = TryCatch(async (req: Request, res: Response) => {
     const user = await getCurrentUser(token);
     const filePath = `${process.env.BASE_URL}/public/${finalFileName}`;
 
-    // Based on extension or explicit type, save to different models
+    // user._id => track who uploaded; isPublic: true => visible to everyone
     const ext = path.extname(fileName).toLowerCase();
-    
+
     if (fileType === "video" || [".mp4", ".mov", ".mkv", ".webm"].includes(ext)) {
       await VideoModel.create({
         name: finalFileName,
         url: filePath,
         setAsBackground: false,
         user: user?._id,
+        isPublic: true,
       });
     } else if (fileType === "image" || [".jpg", ".jpeg", ".png", ".webp", ".svg"].includes(ext)) {
-       await ImageModel.create({
+      await ImageModel.create({
         name: finalFileName,
         url: filePath,
         setAsBackground: false,
         user: user?._id,
+        isPublic: true,
       });
     } else if (fileType === "audio" || [".mp3", ".wav", ".ogg"].includes(ext)) {
-        await AudioModel.create({
-          name: finalFileName,
-          url: filePath,
-          setAsBackground: false,
-          user: user?._id,
-        });
+      await AudioModel.create({
+        name: finalFileName,
+        url: filePath,
+        setAsBackground: false,
+        user: user?._id,
+        isPublic: true,
+      });
     } else if (fileType === "gif" || ext === ".gif") {
-        await GIFModel.create({
-          name: finalFileName,
-          url: filePath,
-          setAsBackground: false,
-          user: user?._id,
-        });
+      await GIFModel.create({
+        name: finalFileName,
+        url: filePath,
+        setAsBackground: false,
+        user: user?._id,
+        isPublic: true,
+      });
     }
 
-    res.status(200).json({ 
-        message: "File upload completed successfully", 
-        url: [filePath] 
+    res.status(200).json({
+      message: "File upload completed successfully",
+      url: [filePath]
     });
   });
 

@@ -22,6 +22,10 @@ const GIFSchema = new Schema(
       type: String,
       default: null,
     },
+    isPublic: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
