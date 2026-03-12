@@ -5,6 +5,7 @@ import multer from "multer";
 import {
   getAllPrivateGIFS,
   getAllPublicGIFS,
+  handleDeleteAllPrivateGIFS,
   handleDeleteAllPublicGIF,
   handleDeleteGIF,
   handleGetBackGroundGIF,
@@ -21,6 +22,7 @@ const upload = multer({ storage });
 gifRouter.route("/").post(upload.array("files"), SaveGIF).get(getAllPublicGIFS);
 gifRouter.route("/private").get(getAllPrivateGIFS);
 gifRouter.route("/delete-public").delete(handleDeleteAllPublicGIF);
+gifRouter.route("/delete-private").delete(handleDeleteAllPrivateGIFS);
 gifRouter.route("/background").get(handleGetBackGroundGIF);
 gifRouter.route("/public-data").get(handleGetProfileGif);
 gifRouter.route("/delete-gif/:id").delete(handleDeleteGIF);

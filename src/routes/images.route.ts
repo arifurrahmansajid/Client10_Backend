@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getAllFiles,
   getAllPrivateFiles,
+  handleDeleteAllPrivateImages,
   handleDeleteAllPublicImages,
   handleDeleteImage,
   handleGetbackGroundImage,
@@ -22,6 +23,7 @@ imageRouter.route("/").post(upload.array("files"), SaveFile).get(getAllFiles);
 imageRouter.route("/private").get(getAllPrivateFiles);
 imageRouter.route("/background").get(handleGetbackGroundImage);
 imageRouter.route("/delete-public").delete(handleDeleteAllPublicImages);
+imageRouter.route("/delete-private").delete(handleDeleteAllPrivateImages);
 imageRouter.route("/public-data").get(handleGetProfileImages);
 imageRouter.route("/delete-image/:id").delete(handleDeleteImage);
 imageRouter.route("/set-background/:id").put(handleSetAsBackground);

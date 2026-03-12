@@ -5,6 +5,7 @@ import multer from "multer";
 import {
   getAllPrivateAudios,
   getAllPublicAudios,
+  handleDeleteAllPrivateAudios,
   handleDeleteAllPublicAudios,
   handleDeleteAudio,
   handleGetBackGroundAudio,
@@ -27,6 +28,7 @@ audioRouter
 audioRouter.route("/private").get(getAllPrivateAudios);
 audioRouter.route("/background").get(handleGetBackGroundAudio);
 audioRouter.route("/delete-public").delete(handleDeleteAllPublicAudios);
+audioRouter.route("/delete-private").delete(handleDeleteAllPrivateAudios);
 audioRouter
   .route("/upload-as-bacground")
   .post(upload.single("files"), handleUploadAsBackground)

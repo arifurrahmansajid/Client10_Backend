@@ -116,6 +116,8 @@ const DeleteProfile = TryCatch(async (req, res) => {
 });
 
 const handleAdminDeleteUser = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
   const token = req.headers.authorization;
   const user = await getCurrentUser(token);
   if (!user?.roles.includes("admin"))

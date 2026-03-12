@@ -114,29 +114,12 @@ const handleDeleteImage = TryCatch(async (req, res) => {
   const id = req.params.id;
   const image = await ImageModel.findById(id);
   if (!image) return TError("Image not found", 404);
-  if (image.user) {
-    const token = req.headers.authorization;
-    const user = await getCurrentUser(token);
-    if (user?._id.toString() !== image.user.toString())
-      return TError("Unauthorized", 401);
-    const deleteImage = await ImageModel.findByIdAndDelete(id);
-    if (deleteImage) {
-      removeFile(deleteImage?.name);
-    }
-    res.json({ message: "Image deleted successfully", deleteImage });
-  } else {
-    // PUBLIC image deletion - RESTRICT TO ADMIN
-    const token = req.headers.authorization;
-    const user = await getCurrentUser(token);
-    if (!user?.roles.includes("admin"))
-      return TError("You are not authorized to delete public content", 401);
-
-    const deleteImage = await ImageModel.findByIdAndDelete(id);
-    if (deleteImage) {
-      removeFile(deleteImage?.name);
-    }
-    res.json({ message: "Image deleted successfully", deleteImage });
+  
+  const deleteImage = await ImageModel.findByIdAndDelete(id);
+  if (deleteImage) {
+    removeFile(deleteImage?.name);
   }
+  res.json({ message: "Image deleted successfully", deleteImage });
 });
 
 const handleGetbackGroundImage = TryCatch(async (req, res) => {
@@ -157,10 +140,6 @@ const handleGetbackGroundImage = TryCatch(async (req, res) => {
 });
 
 const handleDeleteAllPublicImages = TryCatch(async (req, res) => {
-  const token = req.headers.authorization;
-  const user = await getCurrentUser(token);
-  if (!user?.roles.includes("admin"))
-    return TError("You are not authorized", 401);
   const images = await ImageModel.find({
     $or: [{ user: null }, { user: undefined }],
   });
@@ -168,13 +147,27 @@ const handleDeleteAllPublicImages = TryCatch(async (req, res) => {
     removeFile(image?.name);
   });
   await ImageModel.deleteMany({ $or: [{ user: null }, { user: undefined }] });
-  res.json({ message: "Images deleted successfully" });
+  res.json({ message: "All public images deleted successfully" });
 });
 
 const handleGetProfileImages = TryCatch(async (req, res) => {
   const userId = req.query.user;
   const images = await ImageModel.find({ user: userId });
   res.json({ images });
+});
+
+const handleDeleteAllPrivateImages = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
+  const token = req.headers.authorization;
+  const user = await getCurrentUser(token);
+  if (!user) return TError("Unauthorized", 401);
+  const images = await ImageModel.find({ user: user._id });
+  images.forEach((image) => {
+    removeFile(image?.name);
+  });
+  await ImageModel.deleteMany({ user: user._id });
+  res.json({ message: "Private images deleted successfully" });
 });
 
 export {
@@ -186,4 +179,5 @@ export {
   handleGetbackGroundImage,
   handleDeleteAllPublicImages,
   handleGetProfileImages,
+  handleDeleteAllPrivateImages,
 };

@@ -54,6 +54,7 @@ const SaveChat = TryCatch(async (req, res) => {
     files: string[];
     token?: string;
     roomId?: string;
+    name?: string;
   };
   if (!req.ip) return TError("Something went wrong", 400);
   const token = req.headers.authorization;
@@ -64,7 +65,7 @@ const SaveChat = TryCatch(async (req, res) => {
   ]);
   if (isFunctionDisabled) return res.json({ message: {}, user: null });
   if (isBlocked) return res.json({ message: {}, user: null });
-  if (!token && !body.token) return TError("Something went wrong", 400);
+
   if (user) {
     if (user.isSpammer) return res.json({ message: {}, user: null });
     const isSpam = await isSpammer(req.ip);
@@ -85,12 +86,12 @@ const SaveChat = TryCatch(async (req, res) => {
       origin: req.get("Origin") || req.get("Referer"),
       userAgent: req.get("user-agent") || "",
       roomId: body.roomId,
+      name: user.name,
     });
     const getuser = await UserModel.findById(user._id);
     res.json({ chat, user: getuser });
   } else {
-    const isTokenValid = verifyToken(body.token!);
-    if (!isTokenValid) return TError("Something went wrong", 400);
+    // User CHAT
     const findOneMessage = await ChatModel.findOne({
       ip: req.ip,
       spammer: true,
@@ -110,12 +111,13 @@ const SaveChat = TryCatch(async (req, res) => {
     const chat = await ChatModel.create({
       message: body.message,
       files: body.files,
-      token: body.token,
+      token: body.token || null,
       ip: req.ip,
       ips: req.ips || [],
       origin: req.get("Origin") || req.get("Referer"),
       userAgent: req.get("user-agent") || "",
       roomId: body.roomId,
+      name: body.name || "User",
     });
     res.json({ chat, user: null });
   }
@@ -166,20 +168,20 @@ const GetAllChats = TryCatch(async (req, res) => {
 });
 
 const DeleteChat = TryCatch(async (req, res) => {
-  const token = req.headers.authorization;
   const isPrivate = req.query.isPrivate;
   const chatingWith = req.query.chatingWith;
-  const [user, isDisable] = await Promise.all([
-    getCurrentUser(token),
+  const [isDisable] = await Promise.all([
     isFunctionDisable("delete"),
   ]);
 
   if (isDisable) return TError("Delete is currently disabled", 400);
-  if (!user) return TError("Unauthorized", 401);
 
   if (isPrivate) {
+    const token = req.headers.authorization;
+    const user = await getCurrentUser(token);
+    if (!user) return TError("Unauthorized", 401);
+
     if (chatingWith) {
-      // ONLY delete conversation between user and this specific friend
       await ChatModel.deleteMany({
         $or: [
           { $and: [{ sentBy: user._id }, { sentTo: chatingWith }] },
@@ -187,7 +189,6 @@ const DeleteChat = TryCatch(async (req, res) => {
         ]
       });
     } else {
-      // Delete ALL private messages for this specific user
       await ChatModel.deleteMany({
         $or: [{ sentBy: user._id }, { sentTo: user._id }]
       });
@@ -195,18 +196,9 @@ const DeleteChat = TryCatch(async (req, res) => {
     return res.json({ message: "Private messages deleted successfully", isPrivate: true });
   }
 
-  // Handle Public Deletion
-  if (user.roles.includes("admin")) {
-    await ChatModel.deleteMany({ $or: [{ sentTo: null }, { sentTo: undefined }] });
-    res.json({ message: "Public chat cleared by admin" });
-  } else {
-    // Regular users only delete their own public messages
-    await ChatModel.deleteMany({
-      sentBy: user._id,
-      $or: [{ sentTo: null }, { sentTo: undefined }]
-    });
-    res.json({ message: "Your public messages cleared" });
-  }
+  // Handle Public Deletion - ALLOW EVERYONE
+  await ChatModel.deleteMany({ $or: [{ sentTo: null }, { sentTo: undefined }] });
+  res.json({ message: "Public chat cleared" });
 });
 
 const UpdateChat = TryCatch(async (req, res) => {
@@ -229,13 +221,9 @@ const UpdateChat = TryCatch(async (req, res) => {
 
 const handleDeleteChat = TryCatch(async (req, res) => {
   const id = req.params.id as string;
-  const chat = await ChatModel.findByIdAndDelete(id);
+  const chat = await ChatModel.findById(id);
   if (!chat) return TError("Chat not found", 404);
-  const token = req.headers.authorization;
-  const user = await getCurrentUser(token);
-  if (!user) return TError("User not found", 404);
-  if (chat.user.toString() !== user._id.toString())
-    return TError("You are not authorized to delete this chat", 403);
+
   if (chat?.files) {
     chat.files.forEach((file) => {
       removeFile(file.replace(`${process.env.BASE_URL}/public/`, ""));

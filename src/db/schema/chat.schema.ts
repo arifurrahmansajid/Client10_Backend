@@ -48,6 +48,9 @@ const ChatSchema = new Schema(
     roomId: {
       type: String,
     },
+    name: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
