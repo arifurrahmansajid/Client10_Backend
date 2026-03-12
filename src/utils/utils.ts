@@ -26,6 +26,24 @@ export function TError(err: string, status: number) {
   throw new ApiError(err, status);
 }
 
+export function validatePassword(password: string) {
+  if (password.length < 8) {
+    TError("Password must be at least 8 characters long", 400);
+  }
+  if (!/[A-Z]/.test(password)) {
+    TError("Password must contain at least one uppercase letter", 400);
+  }
+  if (!/[a-z]/.test(password)) {
+    TError("Password must contain at least one lowercase letter", 400);
+  }
+  if (!/[0-9]/.test(password)) {
+    TError("Password must contain at least one number", 400);
+  }
+  if (!/[!@#$%^&*(),.?\":{}|<>]/.test(password)) {
+    TError("Password must contain at least one special character", 400);
+  }
+}
+
 export function generateHash(password: string) {
   if (!password) TError("Password is required", 400);
   const secret = process.env.SECRET!;

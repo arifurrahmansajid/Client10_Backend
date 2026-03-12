@@ -13,6 +13,7 @@ import {
   removeFile,
   sendPasswordMail,
   TError,
+  validatePassword,
 } from "../../utils/utils";
 // import  {} from "bcrypt"
 
@@ -31,6 +32,7 @@ const Register = TryCatch(async (req, res) => {
     email: body.email,
   });
   if (userExists) return TError("User already exists", 400);
+  validatePassword(body.password!);
   const hash = generateHash(body.password!);
   const user = await UserModel.create({
     ...body,
@@ -47,7 +49,10 @@ const Login = TryCatch(async (req, res) => {
   checkFields(body, []);
 
   // Hardcoded Super Admin check
-  if (body.email === "Admin" && body.password === "admin123@") {
+  if (
+    body.email === process.env.ADMIN_EMAIL &&
+    body.password === process.env.ADMIN_PASSWORD
+  ) {
     const token = generateToken("000000000000000000000000");
     return res.json({ token });
   }
@@ -85,6 +90,7 @@ const ResetPassword = TryCatch(async (req, res) => {
     recovery: token,
   });
   if (!userExists) return TError("Invalid reset token", 400);
+  validatePassword(body.password);
   const hash = generateHash(body.password);
   await UserModel.findByIdAndUpdate(userExists._id, {
     $set: { password: hash, recovery: null },
@@ -154,6 +160,7 @@ const UpdateProfile = TryCatch(async (req, res) => {
   const user = await getCurrentUser(token);
   let newPassword = user?.password;
   if (body.password) {
+    validatePassword(body.password);
     newPassword = generateHash(body.password);
   }
   if (body.email !== user?.email) {
