@@ -5,6 +5,7 @@ import multer from "multer";
 import {
   getAllPrivateVideos,
   getAllPublicVideos,
+  handleDeleteAllPrivateVideo,
   handleDeleteAllPublicVideo,
   handleDeleteVideo,
   handleGetBackGroundVideo,
@@ -25,6 +26,7 @@ videoRouter
 videoRouter.route("/private").get(getAllPrivateVideos);
 videoRouter.route("/background").get(handleGetBackGroundVideo);
 videoRouter.route("/delete-public").delete(handleDeleteAllPublicVideo);
+videoRouter.route("/delete-private").delete(handleDeleteAllPrivateVideo);
 videoRouter.route("/public-data").get(handleGetProfileVideo);
 videoRouter.route("/delete-video/:id").delete(handleDeleteVideo);
 videoRouter.route("/set-background/:id").put(handleSetAsBackground);

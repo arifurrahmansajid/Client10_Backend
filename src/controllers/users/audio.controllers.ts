@@ -87,29 +87,12 @@ const handleDeleteAudio = TryCatch(async (req, res) => {
   const id = req.params.id;
   const audio = await AudioModel.findById(id);
   if (!audio) return TError("Music not found", 404);
-  if (audio.user) {
-    const token = req.headers.authorization;
-    const user = await getCurrentUser(token);
-    if (user?._id.toString() !== audio.user.toString())
-      return TError("Unauthorized", 401);
-    const deleteAudio = await AudioModel.findByIdAndDelete(id);
-    if (deleteAudio) {
-      removeFile(deleteAudio?.name);
-    }
-    res.json({ message: "Music deleted successfully", deleteAudio });
-  } else {
-    // PUBLIC audio deletion - RESTRICT TO ADMIN
-    const token = req.headers.authorization;
-    const user = await getCurrentUser(token);
-    if (!user?.roles.includes("admin"))
-      return TError("You are not authorized to delete public content", 401);
-
-    const deleteAudio = await AudioModel.findByIdAndDelete(id);
-    if (deleteAudio) {
-      removeFile(deleteAudio?.name);
-    }
-    res.json({ message: "Music deleted successfully", deleteAudio });
+  
+  const deleteAudio = await AudioModel.findByIdAndDelete(id);
+  if (deleteAudio) {
+    removeFile(deleteAudio?.name);
   }
+  res.json({ message: "Music deleted successfully", deleteAudio });
 });
 
 const handleGetBackGroundAudio = TryCatch(async (req, res) => {
@@ -130,10 +113,6 @@ const handleGetBackGroundAudio = TryCatch(async (req, res) => {
 });
 
 const handleDeleteAllPublicAudios = TryCatch(async (req, res) => {
-  const token = req.headers.authorization;
-  const user = await getCurrentUser(token);
-  if (!user?.roles.includes("admin"))
-    return TError("You are not authorized", 401);
   const musics = await AudioModel.find({
     $or: [{ user: null }, { user: undefined }],
   });
@@ -143,7 +122,7 @@ const handleDeleteAllPublicAudios = TryCatch(async (req, res) => {
   await AudioModel.deleteMany({
     $or: [{ user: null }, { user: undefined }],
   });
-  res.json({ message: "Musics deleted successfully" });
+  res.json({ message: "All public musics deleted successfully" });
 });
 
 const handleUploadAsBackground = TryCatch(async (req, res) => {
@@ -194,6 +173,20 @@ const handleGetProfileAudio = TryCatch(async (req, res) => {
   res.json({ musics: audio });
 });
 
+const handleDeleteAllPrivateAudios = TryCatch(async (req, res) => {
+  const isDisable = await isFunctionDisable("delete");
+  if (isDisable) return TError("Delete is disable", 400);
+  const token = req.headers.authorization;
+  const user = await getCurrentUser(token);
+  if (!user) return TError("Unauthorized", 401);
+  const musics = await AudioModel.find({ user: user._id });
+  musics.forEach((music) => {
+    removeFile(music?.name);
+  });
+  await AudioModel.deleteMany({ user: user._id });
+  res.json({ message: "Private music deleted successfully" });
+});
+
 export {
   SaveAudio,
   getAllPublicAudios,
@@ -205,4 +198,5 @@ export {
   handleUploadAsBackground,
   handleGetPrivateBackgroundAudio,
   handleGetProfileAudio,
+  handleDeleteAllPrivateAudios,
 };
